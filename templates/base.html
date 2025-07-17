@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    {% block title %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+</head>
+<body>
+<div class="container">
+    <header class="py-2 my-2">
+        <ul class="nav nav-pills justify-content-center">
+            <li class="nav-item"><a href="/all_strategies"
+                                    class="nav-link {% if current_route == '/all_strategies' %}active{% endif %}">
+                Все стратегии</a></li>
+            <li class="nav-item"><a href="/create_strategy"
+                                    class="nav-link {% if current_route == '/create_strategy' %}active{% endif %}">
+                Создать новую стратегию</a></li>
+            <li class="nav-item"><a href="/tables"
+                                    class="nav-link {% if current_route == '/tables' %}active{% endif %}">
+                Таблицы волотильности</a></li>
+            <li class="nav-item"><a href="/liquidation_count"
+                                    class="nav-link {% if current_route == '/liquidation_count' %}active{% endif %}">
+                Расчёт ликвидации</a></li>
+            <li class="nav-item"><a href="/stats" class="nav-link {% if current_route == '/stats' %}active{% endif %}">
+                История</a></li>
+            <li class="nav-item"><a href="/tables_with_steps"
+                                    class="nav-link {% if current_route == '/tables_with_steps' %}active{% endif %}">
+                Расчёт выполнения</a></li>
+        </ul>
+    </header>
+</div>
+
+{% block body %}{% endblock %}
+
+<div class="container">
+    <footer class="py-2 my-2">
+        <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+            <li class="nav-item"><a href="/all_strategies" class="nav-link px-2 text-body-secondary">Все стратегии</a>
+            </li>
+            <li class="nav-item"><a href="/create_strategy" class="nav-link px-2 text-body-secondary">Создать новую
+                стратегию</a></li>
+            <li class="nav-item"><a href="/tables" class="nav-link px-2 text-body-secondary">Таблицы волотильности</a>
+            </li>
+            <li class="nav-item"><a href="/liquidation_count" class="nav-link px-2 text-body-secondary">Расчёт
+                ликвидации</a></li>
+            <li class="nav-item"><a href="/stats" class="nav-link px-2 text-body-secondary">История</a></li>
+            <li class="nav-item"><a href="/tables_with_steps" class="nav-link px-2 text-body-secondary">Расчёт
+                выполнения</a></li>
+        </ul>
+        <p class="text-center text-body-secondary">© 2025 Company, Inc</p></footer>
+</div>
+</body>
+</html>

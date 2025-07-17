@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}
+<title>Count liquidation</title>
+{% endblock %}
+
+{% block body %}
+<div class="container mt-2 d-flex justify-content-center">
+    <div>
+        <h2>Калькулятор ликвидации</h2>
+
+        <form class="border border-1 border-primary rounded-2 p-3" method="POST" style="max-width: 30rem">
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="percent_down">Процент снижения (%):</label>
+                <input type="number" step="1" min="1" class="form-control" id="percent_down"
+                       name="percent_down" required
+                       value="{{ form_data.percent_down if form_data.percent_down else '' }}">
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="levels_down">Количество уровней (шагов):</label>
+                <input type="number" step="1" min="1" class="form-control" id="levels_down"
+                       name="levels_down" required
+                       value="{{ form_data.levels_down if form_data.levels_down else '' }}">
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="leverage_down">Плечо:</label>
+                <input type="number" step="1" min="1" class="form-control" id="leverage_down"
+                       name="leverage_down" required
+                       value="{{ form_data.leverage_down if form_data.leverage_down else '' }}">
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="after_step_persent_more">Шаг усиления (после какого шага увеличивать
+                    просадку):</label>
+                <input type="number" step="1" class="form-control" id="after_step_persent_more"
+                       name="after_step_persent_more" min="1" required
+                       value="{{ form_data.after_step_persent_more if form_data.after_step_persent_more else '' }}">
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="persent_more_by">Увеличивать просадку на (%):</label>
+                <input type="number" step="0.1" class="form-control" id="persent_more_by"
+                       name="persent_more_by" min="0" required
+                       value="{{ form_data.persent_more_by if form_data.persent_more_by else '' }}">
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-4">Рассчитать</button>
+        </form>
+
+        {% if error %}
+        <div style="color: red; margin-top: 20px;">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if result %}
+        <div style="margin-top: 20px;">
+            <h3>Результат:</h3>
+            <h4 class="">Цена ликвидации: {{ result }}%</h4>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

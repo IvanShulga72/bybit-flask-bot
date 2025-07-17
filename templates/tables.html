@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}
+<title>Table</title>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+
+{% block body %}
+<!-- Лоадер -->
+<div class="loader" id="loader"></div>
+
+<div class="container mt-3 d-flex flex-column align-items-center">
+    <div>
+        <h2>Рассчёт изменения стоимоти</h2>
+        <form id="analysisForm" method="POST" style="min-width: 25rem"
+      class="border border-1 border-primary rounded-2 p-3">
+    <div class="form-group mt-2">
+        <label for="start_date" class="fw-bold">Начало периода</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" required
+               value="{{ form_data.start_date if form_data else '' }}">
+    </div>
+    <div class="form-group mt-2">
+        <label for="end_date" class="fw-bold">Конец периода</label>
+        <input type="date" class="form-control" id="end_date" name="end_date" required
+               value="{{ form_data.end_date if form_data else '' }}">
+    </div>
+    <div class="form-group mt-2">
+        <label for="coin_limit" class="fw-bold">Количество монет</label>
+        <input type="number" class="form-control" id="coin_limit" name="coin_limit" min="1" max="100" required
+               value="{{ form_data.coin_limit if form_data else '10' }}">
+    </div>
+    <div class="form-group mt-2">
+        <label for="max_percent" class="fw-bold">Максимальный процент</label>
+        <input type="number" class="form-control" id="max_percent" name="max_percent" min="3" max="50" required
+               value="{{ form_data.max_percent if form_data else '15' }}">
+    </div>
+    <button type="submit" class="btn btn-primary mt-2" onclick="showLoader()">Расчитать</button>
+</form>
+    </div>
+
+    <!-- Результаты -->
+    {% if show_results and table_data %}
+    <div class="mt-4">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>Symbol</th>
+                    {% for percent in persents %}
+                    <th class="sortable"
+                        data-column="{{ loop.index }}"
+                        onclick="handleSort(this)">
+                        {{ percent }}%
+                        <span class="sort-icon">
+                            <i class="fas fa-sort"></i>
+                        </span>
+                    </th>
+                    {% endfor %}
+                </tr>
+                </thead>
+                <tbody id="tableBody">
+                {% if table_data %}
+                {% for row in table_data %}
+                <tr>
+                    <td>{{ row.symbols }}</td>
+                    {% for percent in persents %}
+                    <td data-sort="{{ row.get('%s%%'|format(percent), 0) }}">
+                        {{ row.get('%s%%'|format(percent), 0) }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="{{ persents|length + 1 }}" class="text-center">No data available</td>
+                </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function handleSort(header) {
+        const column = parseInt(header.dataset.column);
+        const isAsc = header.classList.toggle('asc');
+
+        // Сбрасываем сортировку для других колонок
+        document.querySelectorAll('th.sortable').forEach(h => {
+            if (h !== header) h.classList.remove('asc', 'desc');
+        });
+
+        // Вызываем функцию сортировки
+        sortTable(column, isAsc ? 'asc' : 'desc');
+    }
+
+    function sortTable(columnIndex, direction) {
+        const tbody = document.getElementById('tableBody');
+        const rows = Array.from(tbody.rows);
+
+        rows.sort((a, b) => {
+            const aVal = parseFloat(a.cells[columnIndex].dataset.sort);
+            const bVal = parseFloat(b.cells[columnIndex].dataset.sort);
+            return direction === 'asc' ? aVal - bVal : bVal - aVal;
+        });
+
+        // Очищаем и перезаполняем таблицу
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+    }
+</script>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    function showLoader() {
+        document.getElementById('loader').style.display = 'block';
+    }
+</script>
+
+{% endblock %}

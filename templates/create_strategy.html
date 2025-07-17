@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}
+<title>Create</title>
+{% endblock %}
+
+
+{% block body %}
+<div class="container d-flex flex-column align-items-center">
+    <h2>Создание новой стратегии</h2>
+    <form class="border border-1 border-primary rounded-2 p-3" method="post" style="max-width: 30rem">
+        <div class="container p-0">
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="symbol">Торговая пара:</label>
+                <input type="text" class="form-control" id="symbol" name="symbol" required>
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="start_price">Начальная цена:</label>
+                <input type="text" class="form-control" id="start_price" name="start_price" required>
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="total_invest">Объем инвестиций:</label>
+                <input type="number" step="1" class="form-control" id="total_invest" name="total_invest" required>
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="steps">Количество уровней (шагов):</label>
+                <input type="number" class="form-control" id="steps" name="steps" required min="1">
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="percent_down">Процент падения:</label>
+                <input type="number" step="0.1" class="form-control" id="percent_down" name="percent_down" required>
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="percent_up">Процент роста:</label>
+                <input type="number" step="0.1" class="form-control" id="percent_up" name="percent_up" required>
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="leverage">Кредитное плечо:</label>
+                <input type="number" step="1" class="form-control" id="leverage" name="leverage" required min="1">
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="after_step_persent_more">Шаг усиления (после какого шага увеличивать
+                    просадку):</label>
+                <input type="number" step="1" class="form-control" id="after_step_persent_more"
+                       name="after_step_persent_more" min="1" required>
+            </div>
+
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="persent_more_by">Увеличивать просадку на (%):</label>
+                <input type="number" step="0.1" class="form-control" id="persent_more_by"
+                       name="persent_more_by" min="0" required>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3 me-2">Создать</button>
+            <a href="/all_strategies" class="d-inline-block mt-3 btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
