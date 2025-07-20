@@ -91,24 +91,25 @@ def interval_to_timedelta(interval):
 
 
 # Выносим функцию расчета ликвидации в глобальную область
-def count_liquidation(percent, levels, leverage, after_step_persent_more, persent_more_by):
+def count_liquidation(percent, levels, leverage, after_step_persent_more, persent_more_by,
+                      after_step_persent_more_more, persent_more_more_by):
     count = round(100 / percent) + 1
     persent_down_v = [0] * count
     result = [1000] * count
     middle_cost = [100 - percent * i / 2 if i < levels else 0 for i in range(count)]
     middle_cost_down = [percent * i / 2 if i < levels else 1000 for i in range(count)]
-    sum_persent = 0
+    sum_persent_down = 0
 
     for i in range(count - 1):
         if i < levels:
-            middle_cost_down[i] = sum_persent / 2
-            middle_cost[i] = 100 - sum_persent / 2
+            middle_cost_down[i] = sum_persent_down / 2
+            middle_cost[i] = 100 - sum_persent_down / 2
 
             if i + 1 < after_step_persent_more:
-                sum_persent += percent
+                sum_persent_down += percent
             else:
                 additional_percent = persent_more_by * (i - after_step_persent_more + 1)
-                sum_persent += (percent + additional_percent + persent_more_by)
+                sum_persent_down += (percent + additional_percent + persent_more_by)
 
             persent_down_v[i] = levels / leverage / (i + 1) * 100
         else:
@@ -169,12 +170,11 @@ def create_strategy():
     if request.method == "POST":
         try:
             form_data = request.form
-
             # Проверка наличия обязательных полей
             required_fields = [
-                'symbol', 'start_price', 'total_invest', 'steps',
-                'percent_up', 'percent_down', 'leverage',
-                'after_step_persent_more', 'persent_more_by'
+                'symbol', 'start_price', 'total_invest', 'persent_reinvest', 'steps', 'percent_up', 'percent_down',
+                'leverage', 'after_step_persent_more', 'persent_more_by', 'after_step_persent_more_more',
+                'persent_more_more_by', 'after_step_persent_upp', 'persent_more_by_upp'
             ]
             for field in required_fields:
                 if field not in form_data:
@@ -184,24 +184,34 @@ def create_strategy():
             symbol = form_data['symbol'].upper()
             start_price = float(form_data['start_price'])
             total_invest = float(form_data['total_invest'])
+            persent_reinvest = float(form_data['persent_reinvest'])
             steps = int(form_data['steps'])
             percent_up = float(form_data['percent_up'])
             percent_down = float(form_data['percent_down'])
             leverage = int(form_data['leverage'])
             after_step_persent_more = int(form_data['after_step_persent_more'])
             persent_more_by = float(form_data['persent_more_by'])
+            after_step_persent_more_more = int(form_data['after_step_persent_more_more'])
+            persent_more_more_by = float(form_data['persent_more_more_by'])
+            after_step_persent_upp = int(form_data['after_step_persent_upp'])
+            persent_more_by_upp = float(form_data['persent_more_by_upp'])
 
             # Создаем стратегию
             strategy = LadderStrategy(
                 symbol=symbol,
                 start_price=start_price,
                 total_invest=total_invest,
+                persent_reinvest=persent_reinvest,
                 steps=steps,
                 percent_down=percent_down,
                 percent_up=percent_up,
                 leverage=leverage,
                 after_step_persent_more=after_step_persent_more,
-                persent_more_by=persent_more_by
+                persent_more_by=persent_more_by,
+                after_step_persent_more_more=after_step_persent_more_more,
+                persent_more_more_by=persent_more_more_by,
+                after_step_persent_upp=after_step_persent_upp,
+                persent_more_by_upp=persent_more_by_upp
             )
 
             # Добавляем через контроллер с проверкой конфликтов
@@ -246,6 +256,31 @@ def strategy_edit(strategy_id):
             flash('Стратегия не найдена', 'error')
             return redirect('/all_strategies')
 
+        # Для GET-запроса показываем текущие параметры
+        if request.method == 'GET':
+            strategy_data = original.to_dict()
+            # Создаем form_data для заполнения полей
+            form_data = {
+                'symbol': strategy_data['symbol'],
+                'start_price': strategy_data['start_price'],
+                'total_invest': strategy_data['total_invest'],
+                'persent_reinvest': strategy_data['persent_reinvest'],
+                'steps': strategy_data['steps'],
+                'percent_down': strategy_data['percent_down'],
+                'percent_up': strategy_data['percent_up'],
+                'leverage': strategy_data['leverage'],
+                'after_step_persent_more': strategy_data['after_step_persent_more'],
+                'persent_more_by': strategy_data['persent_more_by'],
+                'after_step_persent_more_more': strategy_data['after_step_persent_more_more'],
+                'persent_more_more_by': strategy_data['persent_more_more_by'],
+                'after_step_persent_upp': strategy_data['after_step_persent_upp'],
+                'persent_more_by_upp': strategy_data['persent_more_by_upp']
+            }
+            current_route = request.path
+            return render_template("strategy_edit.html", strategy=original.to_dict(), form_data=form_data,
+                                   current_route=current_route)
+
+        # Обработка POST-запроса
         if request.method == 'POST':
             try:
                 # 1. Деактивируем оригинальную стратегию
@@ -258,12 +293,17 @@ def strategy_edit(strategy_id):
                     symbol=request.form['symbol'].upper(),
                     start_price=float(request.form['start_price']),
                     total_invest=float(request.form['total_invest']),
+                    persent_reinvest=float(request.form['persent_reinvest']),
                     steps=int(request.form['steps']),
                     percent_down=float(request.form['percent_down']),
                     percent_up=float(request.form['percent_up']),
                     leverage=float(request.form['leverage']),
                     after_step_persent_more=int(request.form['after_step_persent_more']),
-                    persent_more_by=float(request.form['persent_more_by'])
+                    persent_more_by=float(request.form['persent_more_by']),
+                    after_step_persent_more_more=int(request.form['after_step_persent_more_more']),
+                    persent_more_more_by=float(request.form['persent_more_more_by']),
+                    after_step_persent_upp=int(request.form['after_step_persent_upp']),
+                    persent_more_by_upp=float(request.form['persent_more_by_upp'])
                 )
 
                 # 3. Добавляем новую стратегию
@@ -275,11 +315,10 @@ def strategy_edit(strategy_id):
             except Exception as e:
                 flash(f'Ошибка при обновлении: {str(e)}', 'error')
                 current_route = request.path
-                return render_template("strategy_edit.html", strategy=original.to_dict(), current_route=current_route)
-
-        # Для GET-запроса показываем текущие параметры
-        current_route = request.path
-        return render_template("strategy_edit.html", strategy=original.to_dict(), current_route=current_route)
+                # При ошибке передаем введенные данные обратно в форму
+                form_data = request.form.to_dict()
+                return render_template("strategy_edit.html", strategy=original.to_dict(), form_data=form_data,
+                                       current_route=current_route)
 
     except Exception as e:
         flash(f'Ошибка: {str(e)}', 'error')
@@ -299,7 +338,9 @@ def liquidation_count():
                 'levels_down': request.form.get('levels_down'),
                 'leverage_down': request.form.get('leverage_down'),
                 'after_step_persent_more': request.form.get('after_step_persent_more'),
-                'persent_more_by': request.form.get('persent_more_by')
+                'persent_more_by': request.form.get('persent_more_by'),
+                'after_step_persent_more_more': request.form.get('after_step_persent_more_more'),
+                'persent_more_more_by': request.form.get('persent_more_more_by')
             }
 
             # Получаем данные из формы
@@ -308,10 +349,12 @@ def liquidation_count():
             leverage_down = float(request.form.get('leverage_down'))
             after_step_persent_more = float(request.form.get('after_step_persent_more'))
             persent_more_by = float(request.form.get('persent_more_by'))
+            after_step_persent_more_more = float(request.form.get('after_step_persent_more_more'))
+            persent_more_more_by = float(request.form.get('persent_more_more_by'))
 
             # Функция расчета
             result = count_liquidation(percent_down, levels_down, leverage_down, after_step_persent_more,
-                                       persent_more_by)
+                                       persent_more_by, after_step_persent_more_more, persent_more_more_by)
         except ValueError:
             flash("Пожалуйста, введите корректные числовые значения", "error")
         except ZeroDivisionError:
@@ -381,6 +424,8 @@ def stats():
                            coin_stats=coin_stats,
                            form_data=form_data,
                            current_route=current_route)
+
+
 @app.route('/tables', methods=['GET', 'POST'])
 def tables():
     result = None
@@ -499,13 +544,13 @@ def tables():
 
         current_route = request.path
         return render_template('tables.html',
-                           table_data=table_data,
-                           max_percent=max_percent if 'max_percent' in form_data else 15,
-                           persents=persents,
-                           show_results=show_results,
-                           form_data=form_data,  # Передаем данные формы
-                           error=error,
-                           current_route=current_route)
+                               table_data=table_data,
+                               max_percent=max_percent if 'max_percent' in form_data else 15,
+                               persents=persents,
+                               show_results=show_results,
+                               form_data=form_data,  # Передаем данные формы
+                               error=error,
+                               current_route=current_route)
 
     # GET-запрос: передаем начальные значения
     default_max_percent = 15
@@ -521,8 +566,9 @@ def tables():
 
 @app.route('/tables_with_steps', methods=['GET', 'POST'])
 def tables_with_steps():
-    def counted(df, start_price, total_invest, steps, percent_down, percent_up, leverage,
-                after_step_persent_more, persent_more_by):
+    def counted(df, start_price, total_invest, persent_reinvest, steps, percent_down, percent_up, leverage,
+                after_step_persent_more, persent_more_by, after_step_persent_more_more,
+                persent_more_more_by, after_step_persent_upp, persent_more_by_upp):
 
         if df.empty:
             return 0, 0, [], [], [], []
@@ -532,28 +578,58 @@ def tables_with_steps():
         lows = df['low'].astype(float).values
         levels_buy = [0 for _ in range(steps)]
         levels_sell = [0 for _ in range(steps)]
+        arr_persent_down = [0 for _ in range(steps)]
+        arr_persent_upp = [0 for _ in range(steps)]
         invested = [False for _ in range(steps)]
-        sum_persent = 0
         total_invest_sum = total_invest
+        sum_profit = 0
         buy_events = []  # Список для хранения событий покупки
         sell_events = []  # Список для хранения событий продажи (timestamp, цена)
         buy_levels = []  # Список уровней покупки
         sell_levels = []  # Список уровней продажи
 
+# ===================================================================================================
+
+        # Заполняем arr_persent_down
         for i in range(steps):
-            levels_buy[i] = start_price * (1 - sum_persent / 100)
-
-            if i + 1 < after_step_persent_more:
-                sum_persent += percent_down
-                levels_sell[i] = levels_buy[i] * (1 + percent_up / 100)
+            if i == 0:
+                arr_persent_down[i] = 0
+            elif i < after_step_persent_more:
+                arr_persent_down[i] = percent_down
+            elif i < after_step_persent_more_more:
+                step_count = i - after_step_persent_more + 1
+                arr_persent_down[i] = percent_down + persent_more_by * step_count
             else:
-                # Последующие шаги: увеличиваем процент
-                additional_percent = persent_more_by * (i - after_step_persent_more + 1)
-                sum_persent += (percent_down + additional_percent + persent_more_by)
-                levels_sell[i] = levels_buy[i] * (1 + (percent_up + additional_percent) / 100)
+                base = percent_down + persent_more_by * (after_step_persent_more_more - after_step_persent_more)
+                step_count = i - after_step_persent_more_more + 1
+                arr_persent_down[i] = base + persent_more_more_by * step_count
 
+            if i > 0:
+                arr_persent_down[i] += arr_persent_down[i - 1]
+            levels_buy[i] = start_price * (1 - arr_persent_down[i] / 100)
             buy_levels.append(levels_buy[i])
+
+        # Заполняем arr_persent_upp
+        for i in range(steps):
+            if i < after_step_persent_upp:
+                multiplier = after_step_persent_upp - i
+                arr_persent_upp[i] = percent_up + persent_more_by_upp * multiplier
+            elif after_step_persent_more >= i >= after_step_persent_upp:
+                arr_persent_upp[i] = percent_up
+            elif i < after_step_persent_more:
+                arr_persent_upp[i] = percent_up
+            elif i < after_step_persent_more_more:
+                step_count = i - after_step_persent_more + 1
+                arr_persent_upp[i] = percent_up + persent_more_by * step_count
+            else:
+                base = percent_up + persent_more_by * (after_step_persent_more_more - after_step_persent_more)
+                step_count = i - after_step_persent_more_more + 1
+                arr_persent_upp[i] = base + persent_more_more_by * step_count
+
+            levels_sell[i] = levels_buy[i] * (1 + arr_persent_upp[i] / 100)
             sell_levels.append(levels_sell[i])
+
+# =====================================================================================================
 
         for i in range(len(highs)):
             for j in range(len(levels_buy)):
@@ -570,18 +646,20 @@ def tables_with_steps():
                     total_invest_step = total_invest_sum / steps
                     qty = (total_invest_step * leverage) / levels_buy[j]
                     profit = (levels_sell[j] - levels_buy[j]) * qty
+                    sum_profit += profit  # прибыль с уровня
+                    total_invest_sum += profit * (persent_reinvest / 100)  # именно сколько реинвест
 
-                    total_invest_sum += profit
                     # Исправлено: преобразование времени в строку сразу
                     sell_events.append((
                         df['timestamp'].iloc[i].strftime('%Y-%m-%d %H:%M:%S'),
                         float(levels_sell[j])  # Явное преобразование в float
                     ))
 
-        profit_percent = (total_invest_sum - total_invest) / total_invest * 100
+        profit_percent = sum_profit / total_invest * 100
         # Рассчитаем уровень ликвидации
         liquidation_percent = count_liquidation(
-            percent_down, steps, leverage, after_step_persent_more, persent_more_by
+            percent_down, steps, leverage, after_step_persent_more,
+            persent_more_by, after_step_persent_more_more, persent_more_more_by
         )
         liquidation_price = start_price * (1 - liquidation_percent / 100)
 
@@ -597,12 +675,17 @@ def tables_with_steps():
                 'symbol': request.form.get('symbol', ''),
                 'start_price': request.form.get('start_price', ''),
                 'total_invest': request.form.get('total_invest', ''),
+                'persent_reinvest': request.form.get('persent_reinvest', ''),
                 'steps': request.form.get('steps', ''),
                 'percent_down': request.form.get('percent_down', ''),
                 'percent_up': request.form.get('percent_up', ''),
                 'leverage': request.form.get('leverage', ''),
                 'after_step_persent_more': request.form.get('after_step_persent_more', ''),
-                'persent_more_by': request.form.get('persent_more_by', '')
+                'persent_more_by': request.form.get('persent_more_by', ''),
+                'after_step_persent_more_more': request.form.get('after_step_persent_more_more', ''),
+                'persent_more_more_by': request.form.get('persent_more_more_by', ''),
+                'after_step_persent_upp': request.form.get('after_step_persent_upp', ''),
+                'persent_more_by_upp': request.form.get('persent_more_by_upp', '')
             }
 
             start_date = request.form['start_date']
@@ -610,12 +693,17 @@ def tables_with_steps():
             symbol = request.form['symbol'].upper()
             start_price = float(request.form['start_price'])
             total_invest = float(request.form['total_invest'])
+            persent_reinvest = float(request.form['persent_reinvest'])
             steps = int(request.form['steps'])
             percent_down = float(request.form['percent_down'])
             percent_up = float(request.form['percent_up'])
             leverage = float(request.form['leverage'])
             after_step_persent_more = int(request.form['after_step_persent_more'])
             persent_more_by = float(request.form['persent_more_by'])
+            after_step_persent_more_more = int(request.form['after_step_persent_more_more'])
+            persent_more_more_by = float(request.form['persent_more_more_by'])
+            after_step_persent_upp = int(request.form['after_step_persent_upp'])
+            persent_more_by_upp = float(request.form['persent_more_by_upp'])
 
             df = get_bybit_klines(
                 symbol=symbol,
@@ -631,9 +719,10 @@ def tables_with_steps():
                                        error_message="No data found for the selected period",
                                        current_route=current_route)
 
-            count, profit, buy_levels, sell_levels, buy_events, sell_events, liquidation_price = counted(
-                df, start_price, total_invest, steps, percent_down,
-                percent_up, leverage, after_step_persent_more, persent_more_by
+            count, profit_percent, buy_levels, sell_levels, buy_events, sell_events, liquidation_price = counted(
+                df, start_price, total_invest, persent_reinvest, steps, percent_down,
+                percent_up, leverage, after_step_persent_more, persent_more_by, after_step_persent_more_more,
+                persent_more_more_by, after_step_persent_upp, persent_more_by_upp
             )
 
             # Преобразование данных для графика
@@ -669,11 +758,11 @@ def tables_with_steps():
                 'liquidation_price': float(liquidation_price)
             }
 
-            profit_invest = total_invest * profit / 100  # Рассчитываем прибыль в долларах
+            profit_invest = total_invest * profit_percent / 100  # Рассчитываем прибыль в долларах
 
             return render_template('tables_with_steps.html',
                                    count=count,
-                                   profit=profit,
+                                   profit=profit_percent,
                                    profit_invest=round(profit_invest, 2),
                                    chart_data=chart_data,
                                    show_results=True,
@@ -698,3 +787,17 @@ def tables_with_steps():
 
 if __name__ == "__main__":
     app.run(debug=True, use_reloader=False)
+
+# [
+# {"level": 1, "target_price": 1.0,  "invested": true, "buy_price": 1.0,  "sell_price": 1.08,   "qty": 30.0},
+# {"level": 2, "target_price": 0.98, "invested": true, "buy_price": 0.98, "sell_price": 1.029,  "qty": 31.0},
+# {"level": 3, "target_price": 0.96, "invested": true, "buy_price": 0.96, "sell_price": 0.9792, "qty": 31.0},
+# {"level": 4, "target_price": 0.94, "invested": true, "buy_price": 0.94, "sell_price": 0.9588, "qty": 32.0},
+# {"level": 5, "target_price": 0.92, "invested": true, "buy_price": 0.92, "sell_price": 0.9384, "qty": 33.0},
+# {"level": 6, "target_price": 0.89, "invested": true, "buy_price": 0.89, "sell_price": 0.9078, "qty": 34.0},
+# {"level": 7, "target_price": 0.85, "invested": true, "buy_price": 0.85, "sell_price": 0.884,  "qty": 35.0},
+# {"level": 8, "target_price": 0.79, "invested": true, "buy_price": 0.79, "sell_price": 0.8374, "qty": 38.0},
+# {"level": 9, "target_price": 0.71, "invested": true, "buy_price": 0.71, "sell_price": 0.7668, "qty": 42.0},
+# {"level": 10, "target_price": 0.61, "invested": true, "buy_price": 0.61, "sell_price": 0.671, "qty": 49.0}
+# ]
+

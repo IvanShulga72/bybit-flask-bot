@@ -39,78 +39,6 @@ class DatabaseHandler:
             print(f"Ошибка подключения к базе данных: {e}")
             raise
 
-    def get_strategies_stats(self, start_date, end_date):
-        """Возвращает статистику стратегий за период"""
-        self._ensure_connection()
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute('''
-                SELECT 
-                    id,
-                    symbol,
-                    active,
-                    created_at,
-                    count AS total_count,
-                    total_profit,
-                    (SELECT COUNT(*) FROM strategy_events 
-                     WHERE strategy_id = strategies.id 
-                     AND event_time BETWEEN ? AND ?) AS period_count
-                FROM strategies
-                WHERE created_at <= ?
-                ORDER BY created_at DESC
-            ''', (start_date, end_date, end_date))
-
-            return cursor.fetchall()
-        except Exception as e:
-            print(f"Ошибка получения статистики: {e}")
-            return []
-
-    def get_strategy_by_id(self, strategy_id):
-        cursor = self.conn.cursor()
-        cursor.execute('SELECT * FROM strategies WHERE id = ?', (strategy_id,))
-        row = cursor.fetchone()
-        if row:
-            buy_levels = json.loads(row['buy_levels'])
-            return {
-                'id': row['id'],
-                'symbol': row['symbol'],
-                'start_price': row['start_price'],
-                'total_invest': row['total_invest'],
-                'steps': row['steps'],
-                'percent_down': row['percent_down'],
-                'percent_up': row['percent_up'],
-                'leverage': row['leverage'],
-                'after_step_persent_more': row['after_step_persent_more'],
-                'persent_more_by': row['persent_more_by'],
-                'buy_levels': buy_levels,
-                'active': row['active'],
-                'count': row['count']
-            }
-        return None
-
-    def increment_count(self, strategy_id):
-        """Увеличивает счетчик и записывает событие"""
-        self._ensure_connection()
-        cursor = self.conn.cursor()
-        try:
-            # Обновляем счетчик
-            cursor.execute('''
-                UPDATE strategies 
-                SET count = count + 1 
-                WHERE id = ?
-            ''', (strategy_id,))
-
-            # Записываем событие
-            cursor.execute('''
-                INSERT INTO strategy_events (strategy_id, event_type)
-                VALUES (?, 'sell')
-            ''', (strategy_id,))
-
-            self.conn.commit()
-        except Exception as e:
-            self.conn.rollback()
-            raise
-
     def _ensure_connection(self):
         """Проверяет и восстанавливает соединение при необходимости."""
         try:
@@ -133,29 +61,21 @@ class DatabaseHandler:
                 symbol TEXT NOT NULL,
                 start_price REAL NOT NULL,
                 total_invest REAL NOT NULL,
+                persent_reinvest REAL NOT NULL,
                 steps INTEGER NOT NULL,
                 percent_down REAL NOT NULL,
                 percent_up REAL NOT NULL,
                 leverage REAL NOT NULL,
                 after_step_persent_more INTEGER NOT NULL,
                 persent_more_by REAL NOT NULL,
+                after_step_persent_more_more INTEGER NOT NULL,
+                persent_more_more_by REAL NOT NULL, 
+                after_step_persent_upp INTEGER NOT NULL,
+                persent_more_by_upp REAL NOT NULL,   
                 buy_levels TEXT NOT NULL,
                 active TEXT NOT NULL,
-                count INTEGER DEFAULT 0,
-                total_profit REAL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        # Добавляем создание таблицы strategy_events
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS strategy_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                strategy_id INTEGER NOT NULL,
-                event_type TEXT NOT NULL,
-                event_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(strategy_id) REFERENCES strategies(id)
             )
         ''')
 
@@ -167,8 +87,9 @@ class DatabaseHandler:
         try:
             cursor = self.conn.cursor()
             cursor.execute('''
-                SELECT id, symbol, start_price, total_invest, steps, percent_down, 
-                       percent_up, leverage, after_step_persent_more, persent_more_by, buy_levels, count
+                SELECT  id, symbol, start_price, total_invest, persent_reinvest, steps, percent_down, 
+                        percent_up, leverage, after_step_persent_more, persent_more_by, after_step_persent_more_more,
+                        persent_more_more_by, after_step_persent_upp, persent_more_by_upp, buy_levels
                 FROM strategies
                 WHERE active = 'active'
             ''')
@@ -180,14 +101,18 @@ class DatabaseHandler:
                     'symbol': row['symbol'],
                     'start_price': row['start_price'],
                     'total_invest': row['total_invest'],
+                    'persent_reinvest': row['persent_reinvest'],
                     'steps': row['steps'],
                     'percent_down': row['percent_down'],
                     'percent_up': row['percent_up'],
                     'leverage': row['leverage'],
                     'after_step_persent_more': row['after_step_persent_more'],
                     'persent_more_by': row['persent_more_by'],
-                    'buy_levels': json.loads(row['buy_levels']),
-                    'count': row['count']
+                    'after_step_persent_more_more': row['after_step_persent_more_more'],
+                    'persent_more_more_by': row['persent_more_more_by'],
+                    'after_step_persent_upp': row['after_step_persent_upp'],
+                    'persent_more_by_upp': row['persent_more_by_upp'],
+                    'buy_levels': json.loads(row['buy_levels'])
                 })
             return strategies
         except Exception as e:
@@ -199,18 +124,26 @@ class DatabaseHandler:
         cursor = self.conn.cursor()
         buy_levels_json = json.dumps(strategy_data['buy_levels'])
         cursor.execute('''
-            INSERT INTO strategies (symbol, start_price, total_invest, steps, percent_down, percent_up, leverage, after_step_persent_more, persent_more_by, buy_levels, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
+        INSERT INTO strategies (symbol, start_price, total_invest, persent_reinvest, steps, 
+                                percent_down, percent_up, leverage, after_step_persent_more,
+                                persent_more_by, after_step_persent_more_more, persent_more_more_by,
+                                after_step_persent_upp, persent_more_by_upp, buy_levels, active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
             strategy_data['symbol'],
             strategy_data['start_price'],
             strategy_data['total_invest'],
+            strategy_data['persent_reinvest'],
             strategy_data['steps'],
             strategy_data['percent_down'],
             strategy_data['percent_up'],
             strategy_data['leverage'],
             strategy_data['after_step_persent_more'],
             strategy_data['persent_more_by'],
+            strategy_data['after_step_persent_more_more'],
+            strategy_data['persent_more_more_by'],
+            strategy_data['after_step_persent_upp'],
+            strategy_data['persent_more_by_upp'],
             buy_levels_json,
             'active'
         ))
@@ -232,7 +165,6 @@ class DatabaseHandler:
         buy_levels = updated_data.get('buy_levels', [])
         buy_levels_json = json.dumps(buy_levels) if buy_levels else None
         total_invest = updated_data.get('total_invest')
-        total_profit = updated_data.get('total_profit')
 
         try:
             cursor.execute('''
@@ -241,28 +173,36 @@ class DatabaseHandler:
                     symbol = COALESCE(?, symbol),
                     start_price = COALESCE(?, start_price),
                     total_invest = COALESCE(?, total_invest),
+                    persent_reinvest = COALESCE(?, persent_reinvest),
                     steps = COALESCE(?, steps),
                     percent_down = COALESCE(?, percent_down),
                     percent_up = COALESCE(?, percent_up),
                     leverage = COALESCE(?, leverage),
                     after_step_persent_more = COALESCE(?, after_step_persent_more),
                     persent_more_by = COALESCE(?, persent_more_by),
+                    after_step_persent_more_more = COALESCE(?, after_step_persent_more_more),
+                    persent_more_more_by = COALESCE(?, persent_more_more_by),
+                    after_step_persent_upp = COALESCE(?, after_step_persent_upp),
+                    persent_more_by_upp = COALESCE(?, persent_more_by_upp),
                     buy_levels = COALESCE(?, buy_levels),
-                    total_profit = COALESCE(?, total_profit),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             ''', (
                 updated_data.get('symbol'),
                 updated_data.get('start_price'),
-                total_invest,
+                updated_data.get('total_invest'),
+                updated_data.get('persent_reinvest'),
                 updated_data.get('steps'),
                 updated_data.get('percent_down'),
                 updated_data.get('percent_up'),
                 updated_data.get('leverage'),
                 updated_data.get('after_step_persent_more'),
                 updated_data.get('persent_more_by'),
+                updated_data.get('after_step_persent_more_more'),
+                updated_data.get('persent_more_more_by'),
+                updated_data.get('after_step_persent_upp'),
+                updated_data.get('persent_more_by_upp'),
                 buy_levels_json,
-                total_profit,
                 strategy_id
             ))
             self.conn.commit()
@@ -287,22 +227,6 @@ class DatabaseHandler:
             self.conn.rollback()
             raise
 
-    def add_profit(self, strategy_id, profit):
-        """Добавляет прибыль к общей прибыли стратегии"""
-        self._ensure_connection()
-        cursor = self.conn.cursor()
-        try:
-            cursor.execute('''
-                UPDATE strategies
-                SET total_profit = total_profit + ?
-                WHERE id = ?
-            ''', (profit, strategy_id))
-            self.conn.commit()
-        except Exception as e:
-            print(f"Ошибка при обновлении прибыли: {e}")
-            self.conn.rollback()
-            raise
-
     def close(self):
         """Закрывает соединение с базой данных."""
         if self.conn:
@@ -312,15 +236,10 @@ class DatabaseHandler:
 
 class LadderStrategy:
     def __init__(self,
-                 symbol: str,
-                 start_price: float,
-                 total_invest: float,
-                 steps: int,
-                 percent_down: float,
-                 percent_up: float,
-                 leverage: float,
-                 after_step_persent_more: int,
-                 persent_more_by: float,
+                 symbol: str, start_price: float, total_invest: float, persent_reinvest: float,
+                 steps: int, percent_down: float, percent_up: float, leverage: float,
+                 after_step_persent_more: int, persent_more_by: float, after_step_persent_more_more: int,
+                 persent_more_more_by: float, after_step_persent_upp: int, persent_more_by_upp: float,
                  db_handler: DatabaseHandler = None,
                  from_db: bool = False):
         self.db_handler = db_handler  # Сохраняем ссылку на обработчик БД
@@ -328,6 +247,7 @@ class LadderStrategy:
         self.symbol = symbol
         self.start_price = start_price
         self.total_invest = total_invest
+        self.persent_reinvest = persent_reinvest
         self.steps = steps
         self.leverage = leverage
         self.percent_down = percent_down
@@ -340,6 +260,10 @@ class LadderStrategy:
         self.id = None  # ID из базы данных
         self.after_step_persent_more = after_step_persent_more
         self.persent_more_by = persent_more_by
+        self.after_step_persent_more_more = after_step_persent_more_more
+        self.persent_more_more_by = persent_more_more_by
+        self.after_step_persent_upp = after_step_persent_upp
+        self.persent_more_by_upp = persent_more_by_upp
 
         # Инициализация уровней только для новых стратегий
         if not from_db:
@@ -355,13 +279,26 @@ class LadderStrategy:
         if self.after_step_persent_more >= self.steps:
             raise ValueError("Шаг усиления должен быть меньше общего количества шагов")
 
-        self.buy_levels = []  # Явно инициализируем как список
+        self.buy_levels = []
         price_precision = self.get_precisions()[0]
-
-        sum_persent = 0
+        arr_persent_down = [0 for _ in range(self.steps)]
         for i in range(self.steps):
+            if i == 0:
+                arr_persent_down[i] = 0
+            elif i < self.after_step_persent_more:
+                arr_persent_down[i] = self.percent_down
+            elif i < self.after_step_persent_more_more:
+                step_count = i - self.after_step_persent_more + 1
+                arr_persent_down[i] = self.percent_down + self.persent_more_by * step_count
+            else:
+                base = self.percent_down + self.persent_more_by * (
+                        self.after_step_persent_more_more - self.after_step_persent_more)
+                step_count = i - self.after_step_persent_more_more + 1
+                arr_persent_down[i] = base + self.persent_more_more_by * step_count
 
-            price = self.start_price * (1 - sum_persent / 100)
+            if i > 0:
+                arr_persent_down[i] += arr_persent_down[i - 1]
+            price = self.start_price * (1 - arr_persent_down[i] / 100)
 
             self.buy_levels.append({
                 'level': i + 1,
@@ -372,25 +309,24 @@ class LadderStrategy:
                 'qty': None
             })
 
-            if i + 1 < self.after_step_persent_more:
-                sum_persent += self.percent_down
-            else:
-                additional_percent = self.persent_more_by * (i - self.after_step_persent_more + 1)
-                sum_persent += (self.percent_down + additional_percent + self.persent_more_by)
-
     def to_dict(self):
         return {
             'id': self.id,
             'symbol': self.symbol,
             'start_price': self.start_price,
             'total_invest': self.total_invest,
+            'persent_reinvest': self.persent_reinvest,
             'steps': self.steps,
             'percent_down': self.percent_down,
             'percent_up': self.percent_up,
             'leverage': self.leverage,
             'after_step_persent_more': self.after_step_persent_more,
             'persent_more_by': self.persent_more_by,
-            'buy_levels': self.buy_levels  # Добавляем уровни в вывод
+            'after_step_persent_more_more': self.after_step_persent_more_more,
+            'persent_more_more_by': self.persent_more_more_by,
+            'after_step_persent_upp': self.after_step_persent_upp,
+            'persent_more_by_upp': self.persent_more_by_upp,
+            'buy_levels': self.buy_levels
         }
 
     @classmethod
@@ -400,19 +336,22 @@ class LadderStrategy:
             symbol=data['symbol'],
             start_price=data['start_price'],
             total_invest=data['total_invest'],
+            persent_reinvest=data['persent_reinvest'],
             steps=data['steps'],
             percent_down=data['percent_down'],
             percent_up=data['percent_up'],
             leverage=data['leverage'],
             after_step_persent_more=data['after_step_persent_more'],
             persent_more_by=data['persent_more_by'],
+            after_step_persent_more_more=data['after_step_persent_more_more'],
+            persent_more_more_by=data['persent_more_more_by'],
+            after_step_persent_upp=data['after_step_persent_upp'],
+            persent_more_by_upp=data['persent_more_by_upp'],
             db_handler=db_handler,  # Передаем обработчик БД
             from_db=True
         )
         strategy.id = data['id']
         strategy.buy_levels = data.get('buy_levels', [])
-        strategy.count = data.get('count', 0)  # Загружаем значение счетчика
-        strategy.total_profit = data.get('total_profit', 0)
         return strategy
 
     def deactivate(self):
@@ -466,23 +405,6 @@ class LadderStrategy:
         try:
             price_precision, qty_precision, min_qty, min_order_value = self.get_precisions()
             qty = round((self.step_investment * self.leverage) / level['target_price'], qty_precision)
-            order_value = qty * level['target_price']
-
-            # Проверка минимального количества
-            if qty < min_qty:
-                print(f"Количество {qty} меньше минимального {min_qty} для {self.symbol}", "error")
-                return False
-
-            # Проверка минимальной суммы ордера (5 USDT)
-            if order_value < min_order_value:
-                required_qty = math.ceil(
-                    (min_order_value / level['target_price']) * 10 ** qty_precision) / 10 ** qty_precision
-                print(
-                    f"Сумма ордера {order_value:.2f}USDT < минимальной {min_order_value}USDT для {self.symbol}. "
-                    f"Увеличьте объем инвестиций или используйте минимум {required_qty} контрактов",
-                    "error"
-                )
-                return False
 
             order = self.session.place_order(
                 category='linear',
@@ -499,12 +421,26 @@ class LadderStrategy:
                 print(f"Ошибка размещения ордера на покупку ({self.symbol}): {error_msg}", "error")
                 return False
 
-            if level['level'] < self.after_step_persent_more:
-                sell_price_level = round(level['target_price'] * (1 + self.percent_up / 100), price_precision)
+            arr_persent_upp = [0 for _ in range(self.steps)]
+            i = level['level'] - 1
+            if i < self.after_step_persent_upp:
+                multiplier = self.after_step_persent_upp - i
+                arr_persent_upp[i] = self.percent_up + self.persent_more_by_upp * multiplier
+            elif self.after_step_persent_more >= i >= self.after_step_persent_upp:
+                arr_persent_upp[i] = self.percent_up
+            elif i < self.after_step_persent_more:
+                arr_persent_upp[i] = self.percent_up
+            elif i < self.after_step_persent_more_more:
+                step_count = i - self.after_step_persent_more + 1
+                arr_persent_upp[i] = self.percent_up + self.persent_more_by * step_count
             else:
-                additional_percent = self.persent_more_by * (level['level'] - self.after_step_persent_more)
-                sell_price_level = round(level['target_price'] * (1 + (self.percent_up + additional_percent) / 100),
-                                         price_precision)
+                base = self.percent_up + self.persent_more_by * (
+                        self.after_step_persent_more_more - self.after_step_persent_more)
+                step_count = i - self.after_step_persent_more_more + 1
+                arr_persent_upp[i] = base + self.persent_more_more_by * step_count
+
+            sell_price_level = round(level['target_price'] * (1 + arr_persent_upp[i] / 100),
+                                     price_precision)
 
             level.update({
                 'invested': True,
@@ -513,12 +449,11 @@ class LadderStrategy:
                 'qty': qty
             })
 
-            print(f"Placing BUY order {level['target_price']} for level {level['level']} "
+            print(f"Placing BUY order {level['target_price']} for level {level['level']}"
                   f"at {level['target_price']} ({level['qty']} {self.symbol})")
 
             self.log_trade('BUY', level['level'], level['target_price'], qty, 0)
             return True
-
 
         except Exception as e:
             error_msg = f"Ошибка размещения ордера на покупку ({self.symbol}): {str(e)}"
@@ -557,14 +492,12 @@ class LadderStrategy:
                 # Рассчитываем прибыль
                 profit = (level['sell_price'] - level['buy_price']) * level['qty']
                 # Обновляем общий объем инвестиций
-                self.total_invest += profit
+                self.total_invest += profit * (self.persent_reinvest / 100)
                 self.step_investment = self.total_invest / self.steps
 
                 # Обновляем данные в базе
                 if self.db_handler and self.id:
-                    self.db_handler.increment_count(self.id)
                     self.db_handler.update_total_invest(self.id, self.total_invest)
-                    self.db_handler.add_profit(self.id, profit)
 
             self.log_trade('SELL', level['level'], level['sell_price'], level['qty'], profit)
 

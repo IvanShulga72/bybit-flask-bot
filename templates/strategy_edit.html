@@ -14,58 +14,84 @@
         <div class="container">
             <div class="form-group mt-2">
                 <label class="fw-bold" for="symbol">Торговая пара:</label>
-                <input type="text" class="form-control" id="symbol" name="symbol" value="{{ strategy.symbol }}"
-                       required>
+                <input type="text" class="form-control" id="symbol" name="symbol"
+                       value="{{ form_data.symbol if form_data else '' }}" required>
             </div>
-
             <div class="form-group mt-2">
                 <label class="fw-bold" for="start_price">Начальная цена:</label>
                 <input type="text" class="form-control" id="start_price" name="start_price"
-                       value="{{ strategy.start_price }}" required>
+                       value="{{ form_data.start_price if form_data else '' }}" required>
             </div>
-
             <div class="form-group mt-2">
                 <label class="fw-bold" for="total_invest">Объем инвестиций:</label>
                 <input type="number" step="1" class="form-control" id="total_invest" name="total_invest"
-                       value="{{ strategy.total_invest }}" required>
+                       value="{{ form_data.total_invest if form_data else '' }}" required>
             </div>
-
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="persent_reinvest ">Процент реинвестирования прибыли:</label>
+                <input type="number" step="1" class="form-control" id="persent_reinvest " name="persent_reinvest"
+                       value="{{ form_data.persent_reinvest if form_data else '100' }}" required>
+            </div>
             <div class="form-group mt-2">
                 <label class="fw-bold" for="steps">Количество уровней (шагов):</label>
-                <input type="number" class="form-control" id="steps" name="steps" value="{{ strategy.steps }}" required
-                       min="1">
+                <input type="number" class="form-control" id="steps" name="steps"
+                       value="{{ form_data.steps if form_data else '' }}" required min="1">
             </div>
-
             <div class="form-group mt-2">
                 <label class="fw-bold" for="percent_down">Процент падения:</label>
                 <input type="number" step="0.1" class="form-control" id="percent_down" name="percent_down"
-                       value="{{ strategy.percent_down }}" required>
+                       value="{{ form_data.percent_down if form_data else '' }}" required>
             </div>
-
             <div class="form-group mt-2">
                 <label class="fw-bold" for="percent_up">Процент роста:</label>
                 <input type="number" step="0.1" class="form-control" id="percent_up" name="percent_up"
-                       value="{{ strategy.percent_up }}" required>
+                       value="{{ form_data.percent_up if form_data else '' }}" required>
             </div>
-
             <div class="form-group mt-2">
                 <label class="fw-bold" for="leverage">Кредитное плечо:</label>
                 <input type="number" step="1" class="form-control" id="leverage" name="leverage"
-                       value="{{ strategy.leverage }}" required min="1">
+                       value="{{ form_data.leverage if form_data else '' }}" required min="1">
             </div>
-
+            <div class="br border border-1 border-primary"></div>
             <div class="form-group mt-2">
-                <label class="fw-bold" for="after_step_persent_more">Шаг усиления (после какого шага увеличивать
+                <label class="fw-bold" for="after_step_persent_more">Шаг усиления вниз (после какого шага увеличивать
                     просадку):</label>
                 <input type="number" step="1" class="form-control" id="after_step_persent_more"
-                       name="after_step_persent_more" value="{{ strategy.after_step_persent_more }}" min="1" required>
+                       name="after_step_persent_more"
+                       value="{{ form_data.after_step_persent_more if form_data else '1' }}" min="1" required>
             </div>
-
             <div class="form-group mt-2">
                 <label class="fw-bold" for="persent_more_by">Увеличивать просадку на (%):</label>
                 <input type="number" step="0.1" class="form-control" id="persent_more_by" name="persent_more_by"
-                       value="{{ strategy.persent_more_by }}" min="0" required>
+                       value="{{ form_data.persent_more_by if form_data else '0' }}" min="0" required>
             </div>
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="after_step_persent_more_more">Доп. шаг усиления вниз (после какого шага
+                    увеличивать просадку):</label>
+                <input type="number" step="1" class="form-control" id="after_step_persent_more_more"
+                       name="after_step_persent_more_more"
+                       value="{{ form_data.after_step_persent_more_more if form_data else '1' }}" min="1" required>
+            </div>
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="persent_more_more_by">Доп. увеличивать просадку на (%):</label>
+                <input type="number" step="0.1" class="form-control" id="persent_more_more_by" name="persent_more_more_by"
+                       value="{{ form_data.persent_more_more_by if form_data else '0' }}" min="0" required>
+            </div>
+            <div class="br border border-1 border-primary"></div>
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="after_step_persent_upp">Шаг усиления вверх (начиная с какого шага
+                    увеличивать покупку):</label>
+                <input type="number" step="1" class="form-control" id="after_step_persent_upp"
+                       name="after_step_persent_upp"
+                       value="{{ form_data.after_step_persent_upp if form_data else '1' }}" min="1" required>
+            </div>
+            <div class="form-group mt-2">
+                <label class="fw-bold" for="persent_more_by_upp">Увеличивать продажу на (%):</label>
+                <input type="number" step="0.1" class="form-control" id="persent_more_by_upp"
+                       name="persent_more_by_upp"
+                       value="{{ form_data.persent_more_by_upp if form_data else '0' }}" min="0" required>
+            </div>
+
             <button type="submit" class="btn btn-primary mt-3 me-2">Сохранить изменения</button>
             <a href="/all_strategies" class="d-inline-block mt-3 btn btn-secondary">Отмена</a>
         </div>
