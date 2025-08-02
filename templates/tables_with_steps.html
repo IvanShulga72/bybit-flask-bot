@@ -56,7 +56,7 @@
             </div>
             <div class="form-group mt-2">
                 <label class="fw-bold" for="persent_reinvest">Процент реинвестирования прибыли:</label>
-                <input type="number" step="1" class="form-control" id="persent_reinvest" name="persent_reinvest"
+                <input type="number" step="1" min="0" class="form-control" id="persent_reinvest" name="persent_reinvest"
                        value="{{ form_data.persent_reinvest if form_data else '100' }}" required>
             </div>
             <div class="form-group mt-2">
@@ -76,7 +76,7 @@
             </div>
             <div class="form-group mt-2">
                 <label class="fw-bold" for="leverage">Кредитное плечо:</label>
-                <input type="number" step="1" class="form-control" id="leverage" name="leverage" min="1" required
+                <input type="number" step="0.1" class="form-control" id="leverage" name="leverage" min="1" required
                        value="{{ form_data.leverage if form_data else '' }}">
             </div>
             <div class="br border border-1 border-primary"></div>
@@ -109,7 +109,7 @@
             <div class="br border border-1 border-primary"></div>
             <div class="form-group mt-2">
                 <label class="fw-bold" for="after_step_persent_upp">Шаг усиления вверх (начиная с какого шага
-                    увеличивать покупку):</label>
+                    увеличивать продажу):</label>
                 <input type="number" step="1" class="form-control" id="after_step_persent_upp"
                        name="after_step_persent_upp" min="1"
                        value="{{ form_data.after_step_persent_upp if form_data else '1' }}" required>

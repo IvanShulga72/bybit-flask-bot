@@ -12,7 +12,7 @@
         <form class="border border-1 border-primary rounded-2 p-3" method="POST" style="max-width: 30rem">
             <div class="form-group mt-2">
                 <label class="fw-bold" for="percent_down">Процент снижения (%):</label>
-                <input type="number" step="1" min="1" class="form-control" id="percent_down"
+                <input type="number" step="0.1" min="0" class="form-control" id="percent_down"
                        name="percent_down" required
                        value="{{ form_data.percent_down if form_data.percent_down else '' }}">
             </div>
@@ -26,7 +26,7 @@
 
             <div class="form-group mt-2">
                 <label class="fw-bold" for="leverage_down">Плечо:</label>
-                <input type="number" step="1" min="1" class="form-control" id="leverage_down"
+                <input type="number" step="0.1" min="1" class="form-control" id="leverage_down"
                        name="leverage_down" required
                        value="{{ form_data.leverage_down if form_data.leverage_down else '' }}">
             </div>

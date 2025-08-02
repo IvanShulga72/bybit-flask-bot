@@ -91,32 +91,52 @@ def interval_to_timedelta(interval):
 
 
 # Выносим функцию расчета ликвидации в глобальную область
-def count_liquidation(percent, levels, leverage, after_step_persent_more, persent_more_by,
+def count_liquidation(percent_down, steps, leverage, after_step_persent_more, persent_more_by,
                       after_step_persent_more_more, persent_more_more_by):
-    count = round(100 / percent) + 1
-    persent_down_v = [0] * count
-    result = [1000] * count
-    middle_cost = [100 - percent * i / 2 if i < levels else 0 for i in range(count)]
-    middle_cost_down = [percent * i / 2 if i < levels else 1000 for i in range(count)]
-    sum_persent_down = 0
 
-    for i in range(count - 1):
-        if i < levels:
-            middle_cost_down[i] = sum_persent_down / 2
-            middle_cost[i] = 100 - sum_persent_down / 2
-
-            if i + 1 < after_step_persent_more:
-                sum_persent_down += percent
-            else:
-                additional_percent = persent_more_by * (i - after_step_persent_more + 1)
-                sum_persent_down += (percent + additional_percent + persent_more_by)
-
-            persent_down_v[i] = levels / leverage / (i + 1) * 100
+    arr_persent_down = [0] * steps
+    liquidation = [0] * steps
+    for i in range(steps):
+        if i == 0:
+            arr_persent_down[i] = 0
+        elif i < after_step_persent_more:
+            arr_persent_down[i] = percent_down
+        elif i < after_step_persent_more_more:
+            step_count = i - after_step_persent_more + 1
+            arr_persent_down[i] = percent_down + persent_more_by * step_count
         else:
-            persent_down_v[i] = persent_down_v[i - 1] if i > 0 else 0
-        result[i] = middle_cost_down[i] + persent_down_v[i] * middle_cost[i] / 100
+            base = percent_down + persent_more_by * (after_step_persent_more_more - after_step_persent_more)
+            step_count = i - after_step_persent_more_more + 1
+            arr_persent_down[i] = base + persent_more_more_by * step_count
 
-    return round(min(result), 2)
+        if i > 0:
+            arr_persent_down[i] += arr_persent_down[i - 1]
+
+        liquidation[i] = steps / (i + 1) / leverage * 100 + arr_persent_down[i] / 2
+
+    # count = round(100 / percent_down) + 1
+    # persent_down_v = [0] * count
+    # result = [1000] * count
+    # middle_cost = [100 - percent_down * i / 2 if i < steps else 0 for i in range(count)]
+    # middle_cost_down = [percent_down * i / 2 if i < steps else 1000 for i in range(count)]
+    # sum_persent_down = 0
+    # for i in range(count - 1):
+    #     if i < steps:
+    #         middle_cost_down[i] = sum_persent_down / 2
+    #         middle_cost[i] = 100 - sum_persent_down / 2
+    #
+    #         if i + 1 < after_step_persent_more:
+    #             sum_persent_down += percent_down
+    #         else:
+    #             additional_percent = persent_more_by * (i - after_step_persent_more + 1)
+    #             sum_persent_down += (percent_down + additional_percent + persent_more_by)
+    #
+    #         persent_down_v[i] = steps / leverage / (i + 1) * 100
+    #     else:
+    #         persent_down_v[i] = persent_down_v[i - 1] if i > 0 else 0
+    #     result[i] = middle_cost_down[i] + persent_down_v[i] * middle_cost[i] / 100
+
+    return round(min(liquidation), 2)
 
 
 app = Flask(__name__)
